@@ -10,7 +10,6 @@
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/Detection2D.h>
 
-//  for publish image topic
 #include <image_transport/image_transport.h>
 
 
