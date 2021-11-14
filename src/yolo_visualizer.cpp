@@ -50,7 +50,6 @@ std::vector<DetectionData> datas;
  * @param img[cv::Mat]  image source
  * @param data[DetectionData] include information of detected objects
  */
-
 void drawFrame(cv::Mat img, std::vector<DetectionData> _datas)
 {
     //  clone image
