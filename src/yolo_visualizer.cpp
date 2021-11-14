@@ -13,7 +13,8 @@
 #include <image_transport/image_transport.h>
 
 
-static const std::vector<std::string> labelMap = {
+// For Yolov4-tiny
+/*static const std::vector<std::string> labelMap = {
     "person",        "bicycle",      "car",           "motorbike",     "aeroplane",   "bus",         "train",       "truck",        "boat",
     "traffic light", "fire hydrant", "stop sign",     "parking meter", "bench",       "bird",        "cat",         "dog",          "horse",
     "sheep",         "cow",          "elephant",      "bear",          "zebra",       "giraffe",     "backpack",    "umbrella",     "handbag",
@@ -23,6 +24,12 @@ static const std::vector<std::string> labelMap = {
     "donut",         "cake",         "chair",         "sofa",          "pottedplant", "bed",         "diningtable", "toilet",       "tvmonitor",
     "laptop",        "mouse",        "remote",        "keyboard",      "cell phone",  "microwave",   "oven",        "toaster",      "sink",
     "refrigerator",  "book",         "clock",         "vase",          "scissors",    "teddy bear",  "hair drier",  "toothbrush"};
+
+*/
+
+// For Yolov4-tiny_ball
+static const std::vector<std::string> labelMap = {
+    "ball"};
 
 //  iamge topic publisher
 image_transport::Publisher image_pub;
@@ -52,17 +59,37 @@ std::vector<DetectionData> datas;
  */
 void drawFrame(cv::Mat img, std::vector<DetectionData> _datas)
 {
+    /**
+     * Note: Mat's notation is not (x,y), right is (row,col). 
+     * O    row
+     *   * - - - >
+     * c |
+     * o |
+     * l |
+     *   _
+     * 
+     */
+
     //  clone image
     cv::Mat _img = img.clone();
+    // ROS_INFO("Row:%d Col:%d", _img.rows, _img.cols);
     
     //  for each
     for (DetectionData _data : _datas) {
         if(_data.id != -1){
-            //  positon
-            double position_x_min = _data.center_x - (_data.size_x / 2);
-            double position_x_max = _data.center_x + (_data.size_x / 2);
-            double position_y_min = _data.center_y - (_data.size_y / 2);
-            double position_y_max = _data.center_y + (_data.size_y / 2);
+            //  Note: both Mat size and Detection max positon are 416
+            const int MAX_SIZE = 416;
+            //  center positon
+            cv::Point centerPoint = cv::Point(_data.center_x, _data.center_y);
+            //  format object size
+            double size_x = _data.size_x;
+            double size_y = _data.size_y;
+            //  box position
+            double position_x_min = centerPoint.x - (size_x / 2);
+            double position_x_max = centerPoint.x + (size_x / 2);
+            double position_y_min = centerPoint.y - (size_y / 2);
+            double position_y_max = centerPoint.y + (size_y / 2);
+
             //  label name 
             std::string label_name = labelMap[_data.id];
 
@@ -73,7 +100,7 @@ void drawFrame(cv::Mat img, std::vector<DetectionData> _datas)
             cv::putText(
                 _img,
                 label_name,
-                cv::Point(position_x_min, position_y_min),
+                cv::Point(position_x_min + 10, position_y_min - 10),
                 cv::FONT_HERSHEY_TRIPLEX,
                 1,
                 color
@@ -82,11 +109,15 @@ void drawFrame(cv::Mat img, std::vector<DetectionData> _datas)
             //  draw rectangle
             cv::rectangle(
                 _img,
-                cv::Point(position_x_min, position_y_max),
-                cv::Point(position_x_max, position_y_min),
+                cv::Point(position_x_min, position_y_min),
+                cv::Point(position_x_max, position_y_max),
                 color,
                 5
             );
+            
+            // //  plot point
+            // cv::circle(_img, centerPoint, 3, color, -1);
+
         }
     }
 
@@ -118,11 +149,11 @@ void detectionCallback(const vision_msgs::Detection2DArray& msg)
     if(!msg.detections.empty()) {
         //  insert dataros opencv
         for(vision_msgs::Detection2D _d : msg.detections) {  //  insert data
-            DetectionData data = {(int)_d.results[0].id, _d.bbox.center.x, _d.bbox.center.x, _d.bbox.size_x, _d.bbox.size_y};
+            DetectionData data = {(int)_d.results[0].id, _d.bbox.center.x, _d.bbox.center.y, _d.bbox.size_x, _d.bbox.size_y};
             datas.push_back(data);
 
             //  debug 
-            ROS_INFO("whatis:%s x:%f y:%f", labelMap[_d.results[0].id].c_str(), _d.bbox.size_x, _d.bbox.size_y);
+            ROS_INFO("whatis:%s position:%f/%f size:%f/%f", labelMap[_d.results[0].id].c_str(), _d.bbox.center.x, _d.bbox.center.x, _d.bbox.size_x, _d.bbox.size_y);
         }
     }
 }
